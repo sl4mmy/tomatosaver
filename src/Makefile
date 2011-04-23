@@ -23,6 +23,16 @@ all compile: ${PROGS:%.c=%}
 clean:
 	-rm -f *.o tomatosaver_ctl tomatosaverd
 
+daemon.o: daemon.h log.h
+
+log.o: log.h
+
+socket.o: log.h socket.h
+
+tomatosaver_ctl: log.h paths.h socket.o tomatosaver.h
+
+tomatosaverd: daemon.o log.o paths.h socket.o tomatosaver.h
+
 .PHONY: all clean compile ${SUBDIRS}
 
 .EXPORT_ALL_VARIABLES:
