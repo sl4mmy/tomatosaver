@@ -150,8 +150,16 @@ main_loop(struct tomatosaver *tomatosaver)
 			switch (event.type) {
 			case Expose:
 			case MapNotify:
-				display_message(window,
-				    "Get up, walk around, give your eyes a break, and come back in 5 minutes");
+				XClearWindow(window->display, window->xwindow);
+				if (tomatosaver->current_state == STATE_WAITING) {
+					display_message(window, "Click "
+					    "anywhere in window to start next "
+					    "pomodori");
+				} else {
+					display_message(window, "Get up, walk "
+					    "around, give your eyes a break, "
+					    "and come back in 5 minutes");
+				}
 				break;
 			case UnmapNotify:
 				break;
@@ -180,14 +188,22 @@ main_loop(struct tomatosaver *tomatosaver)
 			return EXIT_FAILURE;
 		case 0:
 			/* Timed out waiting for events. */
-			if (tomatosaver->current_state == STATE_POMODORI) {
+			switch (tomatosaver->current_state) {
+			case STATE_POMODORI:
 				tomatosaver->current_state = STATE_SHORT_BREAK;
 				tomatosaver->next_transition = five_minutes_from_now();
 				display_window(window);
-			} else {
-				tomatosaver->current_state = STATE_POMODORI;
-				tomatosaver->next_transition = twenty_five_minutes_from_now();
-				hide_window(window);
+				break;
+			case STATE_SHORT_BREAK:
+			case STATE_LONG_BREAK:
+				tomatosaver->current_state = STATE_WAITING;
+				XClearWindow(window->display, window->xwindow);
+				display_message(window, "Click anywhere in "
+				    "window to start next pomodori");
+				/* FALLTHROUGH */
+			case STATE_WAITING:
+				tomatosaver->next_transition = time(NULL) + 5;
+				break;
 			}
 			continue;
 		default:
