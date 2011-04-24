@@ -19,20 +19,17 @@
 
 #include <X11/Xlib.h>
 
-struct tomatosaver_message {
-	char	*contents;
-	int	 x, y;
-};
-
 struct tomatosaver_window {
 	Display				*display;
 	GC				 graphics_context;
 	Window				 root_window, xwindow;
-	struct tomatosaver_message	*message;
+	XFontStruct			*font;
+	int				 height, width;
 };
 
 void				 close_window(struct tomatosaver_window *);
-void				 display_message(struct tomatosaver_window *);
+void				 display_message(struct tomatosaver_window *,
+				    const char *);
 void				 display_window(struct tomatosaver_window *);
 void				 hide_window(struct tomatosaver_window *);
 struct tomatosaver_window	*init_window(void);

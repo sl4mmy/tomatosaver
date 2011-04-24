@@ -150,7 +150,8 @@ main_loop(struct tomatosaver *tomatosaver)
 			switch (event.type) {
 			case Expose:
 			case MapNotify:
-				display_message(window);
+				display_message(window,
+				    "Get up, walk around, give your eyes a break, and come back in 5 minutes");
 				break;
 			case UnmapNotify:
 				break;
