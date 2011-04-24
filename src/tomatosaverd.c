@@ -28,7 +28,9 @@
 #include "log.h"
 #include "paths.h"
 #include "socket.h"
+#include "timer.h"
 #include "tomatosaver.h"
+#include "window.h"
 
 #ifndef MAX
 #define MAX(left, right)	(((left) >= (right)) ? (left) : (right))
@@ -121,10 +123,12 @@ error_out:
 int
 main_loop(struct tomatosaver *tomatosaver)
 {
-	struct timeval		 timeout;
-	fd_set			 fds;
-	enum message_type	 msg_type;
-	int			 connection, highest_fd;
+	struct tomatosaver_window	*window;
+	XEvent				 event;
+	struct timeval			 timeout;
+	fd_set				 fds;
+	enum message_type		 msg_type;
+	int				 connection, display_fd, highest_fd;
 
 	if (listen(tomatosaver->control_socket, 8) == -1) {
 		log_error("Unable to listen on control socket: %s\n",
@@ -132,24 +136,58 @@ main_loop(struct tomatosaver *tomatosaver)
 		return EXIT_FAILURE;
 	}
 
-	tomatosaver->current_state = STATE_POMODORI;
+	window = init_window();
+
+	display_fd = XConnectionNumber(window->display);
+
+	tomatosaver->current_state = STATE_SHORT_BREAK;
+	tomatosaver->next_transition = five_minutes_from_now();
 
 	highest_fd = 0;
 	for (;;) {
+		while (XPending(window->display)) {
+			XNextEvent(window->display, &event);
+			switch (event.type) {
+			case Expose:
+			case MapNotify:
+				display_message(window);
+				break;
+			case UnmapNotify:
+				break;
+			case ButtonPress:
+				tomatosaver->current_state = STATE_POMODORI;
+				tomatosaver->next_transition = twenty_five_minutes_from_now();
+				hide_window(window);
+				break;
+			}
+		}
+
 		FD_ZERO(&fds);
 		FD_SET(tomatosaver->control_socket, &fds);
+		FD_SET(display_fd, &fds);
 		highest_fd = MAX(highest_fd, tomatosaver->control_socket);
+		highest_fd = MAX(highest_fd, display_fd);
 
-		timeout.tv_sec = 3600;
+		timeout.tv_sec = seconds_until(tomatosaver->next_transition);
 		timeout.tv_usec = 0;
 
 		switch(select(highest_fd + 1, &fds, NULL, NULL, &timeout)) {
 		case -1:
 			log_error("Unable to wait for data: %s\n",
 			    strerror(errno));
+			close_window(window);
 			return EXIT_FAILURE;
 		case 0:
-			/* Timed out waiting for data. */
+			/* Timed out waiting for events. */
+			if (tomatosaver->current_state == STATE_POMODORI) {
+				tomatosaver->current_state = STATE_SHORT_BREAK;
+				tomatosaver->next_transition = five_minutes_from_now();
+				display_window(window);
+			} else {
+				tomatosaver->current_state = STATE_POMODORI;
+				tomatosaver->next_transition = twenty_five_minutes_from_now();
+				hide_window(window);
+			}
 			continue;
 		default:
 			if (FD_ISSET(tomatosaver->control_socket, &fds)) {
@@ -159,6 +197,7 @@ main_loop(struct tomatosaver *tomatosaver)
 					log_error("Unable to accept new "
 					    "connection: %s\n",
 					    strerror(errno));
+					close_window(window);
 					return EXIT_FAILURE;
 				}
 
@@ -176,6 +215,7 @@ main_loop(struct tomatosaver *tomatosaver)
 						log_info("Shutting down\n");
 						tomatosaver->current_state =
 						    STATE_NOT_RUNNING;
+						close_window(window);
 						close(connection);
 						return EXIT_SUCCESS;
 					}
@@ -185,6 +225,7 @@ main_loop(struct tomatosaver *tomatosaver)
 		}
 	}
 
+	close_window(window);
 	return EXIT_SUCCESS;
 }
 

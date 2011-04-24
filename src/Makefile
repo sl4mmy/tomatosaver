@@ -23,15 +23,21 @@ all compile: ${PROGS:%.c=%}
 clean:
 	-rm -f *.o tomatosaver_ctl tomatosaverd
 
+# OBJS
 daemon.o: daemon.h log.h
 
 log.o: log.h
 
 socket.o: log.h socket.h
 
+timer.o: timer.h
+
+window.o: log.h window.h
+
+# PROGS
 tomatosaver_ctl: log.h paths.h socket.o tomatosaver.h
 
-tomatosaverd: daemon.o log.o paths.h socket.o tomatosaver.h
+tomatosaverd: daemon.o log.o paths.h socket.o timer.o tomatosaver.h window.o
 
 .PHONY: all clean compile ${SUBDIRS}
 

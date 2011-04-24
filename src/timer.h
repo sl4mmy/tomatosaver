@@ -14,32 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _TOMATOSAVER_H_
-#define _TOMATOSAVER_H_
+#ifndef _TIMER_H_
+#define _TIMER_H_
 
 #include <time.h>
-#include <unistd.h>
 
-enum message_type {
-	MSG_CTL_NONE,
-	MSG_CTL_STATUS,
-	MSG_CTL_QUIT
-};
+time_t	 five_minutes_from_now(void);
+time_t	 twenty_minutes_from_now(void);
+time_t	 twenty_five_minutes_from_now(void);
 
-enum tomatosaver_state {
-	STATE_NOT_RUNNING,
-	STATE_POMODORI,
-	STATE_SHORT_BREAK,
-	STATE_LONG_BREAK,
-	STATE_WAITING,
-};
+time_t	 seconds_until(time_t);
 
-struct tomatosaver {
-	pid_t			 process_id;
-	time_t			 started_at;
-	time_t			 next_transition;
-	enum tomatosaver_state	 current_state;
-	int			 control_socket;
-};
-
-#endif /* !defined(_TOMATOSAVER_H_) */
+#endif /* !defined(_TIMER_H_) */

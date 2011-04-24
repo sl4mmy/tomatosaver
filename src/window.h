@@ -14,32 +14,27 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _TOMATOSAVER_H_
-#define _TOMATOSAVER_H_
+#ifndef _WINDOW_H_
+#define _WINDOW_H_
 
-#include <time.h>
-#include <unistd.h>
+#include <X11/Xlib.h>
 
-enum message_type {
-	MSG_CTL_NONE,
-	MSG_CTL_STATUS,
-	MSG_CTL_QUIT
+struct tomatosaver_message {
+	char	*contents;
+	int	 x, y;
 };
 
-enum tomatosaver_state {
-	STATE_NOT_RUNNING,
-	STATE_POMODORI,
-	STATE_SHORT_BREAK,
-	STATE_LONG_BREAK,
-	STATE_WAITING,
+struct tomatosaver_window {
+	Display				*display;
+	GC				 graphics_context;
+	Window				 root_window, xwindow;
+	struct tomatosaver_message	*message;
 };
 
-struct tomatosaver {
-	pid_t			 process_id;
-	time_t			 started_at;
-	time_t			 next_transition;
-	enum tomatosaver_state	 current_state;
-	int			 control_socket;
-};
+void				 close_window(struct tomatosaver_window *);
+void				 display_message(struct tomatosaver_window *);
+void				 display_window(struct tomatosaver_window *);
+void				 hide_window(struct tomatosaver_window *);
+struct tomatosaver_window	*init_window(void);
 
-#endif /* !defined(_TOMATOSAVER_H_) */
+#endif /* !defined(_WINDOW_H_) */

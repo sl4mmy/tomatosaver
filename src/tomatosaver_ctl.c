@@ -97,6 +97,8 @@ main(int argc, char **argv)
 		log_info("Running (pid=%ld) since %s",
 		    (long)tomatosaver.process_id,
 		    ctime(&tomatosaver.started_at));
+		log_info("Next transition at %s",
+		    ctime(&tomatosaver.next_transition));
 		break;
 	case STATE_NOT_RUNNING:
 		log_info("Not running\n");

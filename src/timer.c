@@ -14,32 +14,40 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _TOMATOSAVER_H_
-#define _TOMATOSAVER_H_
+#include "timer.h"
 
-#include <time.h>
-#include <unistd.h>
+#ifndef MAX
+#define MAX(left, right)	(((left) >= (right)) ? (left) : (right))
+#endif
 
-enum message_type {
-	MSG_CTL_NONE,
-	MSG_CTL_STATUS,
-	MSG_CTL_QUIT
-};
+time_t	 minutes_from_now(int);
 
-enum tomatosaver_state {
-	STATE_NOT_RUNNING,
-	STATE_POMODORI,
-	STATE_SHORT_BREAK,
-	STATE_LONG_BREAK,
-	STATE_WAITING,
-};
+time_t
+minutes_from_now(int minutes)
+{
+	return time(NULL) + (time_t)(minutes * 60);
+}
 
-struct tomatosaver {
-	pid_t			 process_id;
-	time_t			 started_at;
-	time_t			 next_transition;
-	enum tomatosaver_state	 current_state;
-	int			 control_socket;
-};
+time_t
+five_minutes_from_now(void)
+{
+	return minutes_from_now(5);
+}
 
-#endif /* !defined(_TOMATOSAVER_H_) */
+time_t
+twenty_minutes_from_now(void)
+{
+	return minutes_from_now(20);
+}
+
+time_t
+twenty_five_minutes_from_now(void)
+{
+	return minutes_from_now(25);
+}
+
+time_t
+seconds_until(time_t instant)
+{
+	return MAX((time_t)0, instant - time(NULL));
+}
