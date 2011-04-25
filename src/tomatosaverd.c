@@ -128,7 +128,10 @@ main_loop(struct tomatosaver *tomatosaver)
 	struct timeval			 timeout;
 	fd_set				 fds;
 	enum message_type		 msg_type;
-	int				 connection, display_fd, highest_fd;
+	int				 buffer_length, connection, display_fd,
+					    highest_fd, minutes, seconds,
+					    seconds_remaining;
+	char				*buffer, *message;
 
 	if (listen(tomatosaver->control_socket, 8) == -1) {
 		log_error("Unable to listen on control socket: %s\n",
@@ -143,6 +146,21 @@ main_loop(struct tomatosaver *tomatosaver)
 	tomatosaver->current_state = STATE_SHORT_BREAK;
 	tomatosaver->next_transition = five_minutes_from_now();
 
+	minutes = 5;
+	seconds = 0;
+
+	message = "Get up, walk around, give your eyes a break, and come back "
+	    "in %02d:%02d minutes";
+	buffer_length = strlen(message) - 3;
+	buffer = (char *)malloc(buffer_length + 1);
+	if (buffer == NULL) {
+		log_error("Unable to allocate enough memory to hold the "
+		    "countdown timer: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
+	memset(buffer, 0, buffer_length + 1);
+	snprintf(buffer, buffer_length, message, minutes, seconds);
+
 	highest_fd = 0;
 	for (;;) {
 		while (XPending(window->display)) {
@@ -156,9 +174,7 @@ main_loop(struct tomatosaver *tomatosaver)
 					    "anywhere in window to start next "
 					    "pomodori");
 				} else {
-					display_message(window, "Get up, walk "
-					    "around, give your eyes a break, "
-					    "and come back in 5 minutes");
+					display_message(window, buffer);
 				}
 				break;
 			case UnmapNotify:
@@ -177,17 +193,8 @@ main_loop(struct tomatosaver *tomatosaver)
 		highest_fd = MAX(highest_fd, tomatosaver->control_socket);
 		highest_fd = MAX(highest_fd, display_fd);
 
-		timeout.tv_sec = seconds_until(tomatosaver->next_transition);
-		timeout.tv_usec = 0;
-
-		switch(select(highest_fd + 1, &fds, NULL, NULL, &timeout)) {
-		case -1:
-			log_error("Unable to wait for data: %s\n",
-			    strerror(errno));
-			close_window(window);
-			return EXIT_FAILURE;
-		case 0:
-			/* Timed out waiting for events. */
+		seconds_remaining = seconds_until(tomatosaver->next_transition);
+		if (seconds_remaining == 0) {
 			switch (tomatosaver->current_state) {
 			case STATE_POMODORI:
 				tomatosaver->current_state = STATE_SHORT_BREAK;
@@ -202,8 +209,30 @@ main_loop(struct tomatosaver *tomatosaver)
 				    "window to start next pomodori");
 				/* FALLTHROUGH */
 			case STATE_WAITING:
-				tomatosaver->next_transition = time(NULL) + 5;
+				tomatosaver->next_transition = time(NULL) + 30;
 				break;
+			}
+		}
+
+		minutes = seconds_remaining / 60;
+		seconds = seconds_remaining % 60;
+		snprintf(buffer, buffer_length, message, minutes, seconds);
+
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+
+		switch(select(highest_fd + 1, &fds, NULL, NULL, &timeout)) {
+		case -1:
+			log_error("Unable to wait for data: %s\n",
+			    strerror(errno));
+			close_window(window);
+			return EXIT_FAILURE;
+		case 0:
+			/* Timed out waiting for events. */
+			if (tomatosaver->current_state == STATE_SHORT_BREAK ||
+			    tomatosaver->current_state == STATE_LONG_BREAK) {
+				XClearWindow(window->display, window->xwindow);
+				display_message(window, buffer);
 			}
 			continue;
 		default:
